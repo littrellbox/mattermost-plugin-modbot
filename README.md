@@ -1,2 +1,2 @@
-##Modbot
+# Modbot
 Mattermost moderation tool.
