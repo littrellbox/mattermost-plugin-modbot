@@ -3,7 +3,7 @@ package main
 import (
 	"strings"
 	"sync"
-
+	
 	"github.com/mattermost/mattermost-server/model"
 	"github.com/mattermost/mattermost-server/plugin"
 )
@@ -19,7 +19,9 @@ type Plugin struct {
 	configuration *configuration
 }
 
-var muteduserids []string
+var mutedchannelids []string
+var muteduserids    []string
+var fileblockedids  []string
 
 const (
 	trigger     string = "mod"
@@ -272,6 +274,44 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		}
 	}
 
+	//togglefiles
+	if argumentArray[1] == "togglefiles" {
+		if len(argumentArray) == 2 {
+			if stringInSlice(args.TeamId, fileblockedids) == true {
+				fileblockedids = remove(fileblockedids, args.TeamId)
+				return &model.CommandResponse{
+					ResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
+					Text:         "A moderator has enabled file uploads in this team.",
+					Username:     "System",
+				}, nil
+			}
+			fileblockedids = append(fileblockedids, args.TeamId)
+			return &model.CommandResponse{
+				ResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
+				Text:         "A moderator has disabled file uploads in this team.",
+				Username:     "System",
+			}, nil
+		}
+	}
+	
+	if argumentArray[1] == "mutechannel" {
+		if len(argumentArray) == 2 {
+			if stringInSlice(args.ChannelId, mutedchannelids) == true {
+				mutedchannelids = remove(mutedchannelids, args.ChannelId)
+				return &model.CommandResponse{
+					ResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
+					Text:         "A moderator has enabled chat in this channel.",
+					Username:     "System",
+				}, nil
+			}
+			mutedchannelids = append(mutedchannelids, args.ChannelId)
+			return &model.CommandResponse{
+				ResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
+				Text:         "A moderator has disabled chat in this channel",
+				Username:     "System",
+			}, nil
+		}
+	}	
 	return &model.CommandResponse{
 		ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 		Text:         "That subcommand doesn't exist.",
@@ -280,8 +320,34 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 }
 
 func (p *Plugin) MessageWillBePosted(c *plugin.Context, post *model.Post) (*model.Post, string) {
+	moderatorList := strings.Split(strings.TrimSpace(p.getConfiguration().Moderators), ",")
+	var targetchannel *model.Channel
+	var err2 *model.AppError
+	targetchannel, err2 = p.API.GetChannel(post.ChannelId)
+	if err2 != nil {
+		return nil, "An error has occured determining if the file could be uploaded or not. (2)"
+	}
+	var targetuser *model.User
+	targetuser, err2 = p.API.GetUser(post.UserId)
+	if err2 != nil {
+		return nil, "An error has occured determining if the file could be uploaded or not. (2)"
+	}
+	
+	if (stringInSlice(targetchannel.TeamId, fileblockedids)) {
+		if len(post.FileIds) != 0 {
+			return nil, "File uploading is disabled."
+		}
+	}
+	if stringInSlice(post.ChannelId, mutedchannelids) == true {
+		if stringInSlice(targetuser.Username, moderatorList) == false {
+			return nil, "You are not permitted to talk in this channel at this time."
+		}
+	}
 	if stringInSlice(post.UserId, muteduserids) == true {
 		return nil, "You are muted!"
 	}
 	return post, ""
 }
+
+
+
