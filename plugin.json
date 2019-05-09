@@ -2,7 +2,7 @@
     "id": "me.william341.mattermost-modbot",
     "name": "Moderation Tool",
     "description": "A simple moderation tool for Mattermost.",
-    "version": "0.2.0",
+    "version": "0.3.0",
     "server": {
         "executables": {
             "linux-amd64": "server/dist/plugin-linux-amd64",
@@ -20,6 +20,13 @@
                 "type": "text",
                 "help_text": "List of moderators, comma seperated (no spaces).",
                 "placeholder": "bob,jane,jack"
+            },
+            {
+                "key": "ReportChannel",
+                "display_name": "Report Channel ID",
+                "type": "text",
+                "help_text": "ID of channel to send reports to",
+                "placeholder": "Channel ID"
             }
         ]
     }
