@@ -27,6 +27,13 @@
                 "type": "text",
                 "help_text": "ID of channel to send reports to",
                 "placeholder": "Channel ID"
+            },
+            {
+                "key": "AuditChannel",
+                "display_name": "Audit Channel ID",
+                "type": "text",
+                "help_text": "ID of channel to send logs to",
+                "placeholder": "Channel ID"
             }
         ]
     }

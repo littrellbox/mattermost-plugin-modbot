@@ -72,13 +72,23 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	var err *model.AppError
 	user, err = p.API.GetUser(args.UserId)
 	reportChannel := strings.TrimSpace(p.getConfiguration().ReportChannel)
+	auditChannel := strings.TrimSpace(p.getConfiguration().AuditChannel)
 	if len(argumentArray) == 0 {
 		return &model.CommandResponse{
 			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 			Text:         "huh?",
 		}, nil
 	}
-
+	
+	var auditPost *model.Post
+	auditPost = &model.Post{ 
+		UserId: user.Id,
+		ChannelId: auditChannel,
+		Message: args.Command,
+	}
+	
+	p.API.CreatePost(auditPost)
+	
 	if strings.Contains(argumentArray[0], reporttrigger) {
 		if argumentArray[1] == "bug" {
 			if reportChannel == "" {

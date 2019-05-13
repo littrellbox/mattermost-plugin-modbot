@@ -20,6 +20,7 @@ import (
 type configuration struct {
 	Moderators    string
 	ReportChannel string
+	AuditChannel  string
 }
 
 // Clone shallow copies the configuration. Your implementation may require a deep copy if
