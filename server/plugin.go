@@ -79,16 +79,25 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 			Text:         "huh?",
 		}, nil
 	}
-	
+
 	var auditPost *model.Post
-	auditPost = &model.Post{ 
-		UserId: user.Id,
+	auditPost = &model.Post{
+		UserId:    user.Id,
 		ChannelId: auditChannel,
-		Message: args.Command,
+		Message:   args.Command,
 	}
-	
+
 	p.API.CreatePost(auditPost)
-	
+
+	if len(argumentArray) > 2 {
+		if stringInSlice(argumentArray[2], moderatorList) {
+			return &model.CommandResponse{
+				ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+				Text:         "You can't perform an action on a mod.",
+			}, nil
+		}
+	}
+
 	if strings.Contains(argumentArray[0], reporttrigger) {
 		if argumentArray[1] == "bug" {
 			if reportChannel == "" {
