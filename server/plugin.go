@@ -80,24 +80,6 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		}, nil
 	}
 
-	var auditPost *model.Post
-	auditPost = &model.Post{
-		UserId:    user.Id,
-		ChannelId: auditChannel,
-		Message:   args.Command,
-	}
-
-	p.API.CreatePost(auditPost)
-
-	if len(argumentArray) > 2 {
-		if stringInSlice(argumentArray[2], moderatorList) {
-			return &model.CommandResponse{
-				ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
-				Text:         "You can't perform an action on a mod.",
-			}, nil
-		}
-	}
-
 	if strings.Contains(argumentArray[0], reporttrigger) {
 		if argumentArray[1] == "bug" {
 			if reportChannel == "" {
@@ -106,11 +88,19 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 					Text:         "The report channel id is not yet set",
 				}, nil
 			}
+			
+			var reportPost *model.Post
+			reportPost = &model.Post{
+				UserId:    user.Id,
+				ChannelId: reportChannel,
+				Message:   ":bug: " + strings.Replace(args.Command, "/report bug ", "", 1),
+			}
+
+			p.API.CreatePost(reportPost)
+			
 			return &model.CommandResponse{
 				ResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
-				Text:         ":bug: " + strings.Replace(args.Command, "/report bug ", "", 1),
-				ChannelId:    reportChannel,
-				Username:     "Reports",
+				Text:         "Your report has been received.",
 			}, nil
 		}
 		if len(argumentArray) > 2 {
@@ -120,11 +110,19 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 					Text:         "The report channel id is not yet set",
 				}, nil
 			}
+			
+			var reportPost *model.Post
+			reportPost = &model.Post {
+				UserId:    user.Id,
+				ChannelId: reportChannel,
+				Message:   ":warning: @all " + argumentArray[1] + ": " + strings.Replace(args.Command, "/report "+argumentArray[1]+ " ", "", 1),
+			}
+
+			p.API.CreatePost(reportPost)
+			
 			return &model.CommandResponse{
-				ResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
-				Text:         ":warning: @all " + argumentArray[1] + ": " + strings.Replace(args.Command, "/report "+argumentArray[1]+" ", "", 1),
-				ChannelId:    reportChannel,
-				Username:     "Reports",
+				ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+				Text:         "Your report has been received.",
 			}, nil
 		}
 		return &model.CommandResponse{
@@ -137,6 +135,15 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		}, nil
 	}
 
+	var auditPost *model.Post
+	auditPost = &model.Post{
+		UserId:    user.Id,
+		ChannelId: auditChannel,
+		Message:   args.Command,
+	}
+
+	p.API.CreatePost(auditPost)
+	
 	if err != nil {
 		return &model.CommandResponse{
 			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
@@ -163,6 +170,19 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	response, error = nil, nil
 
 	if response == nil {
+		response, error = p.HandleUtil(argumentArray, user, moderatorList, args)
+	}
+	
+	if len(argumentArray) > 2 {
+		if stringInSlice(argumentArray[2], moderatorList) {
+			return &model.CommandResponse{
+				ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+				Text:         "You can't perform an action on a mod.",
+			}, nil
+		}
+	}
+	
+	if response == nil {
 		response, error = p.HandleFiles(argumentArray, user, moderatorList, args)
 	}
 
@@ -172,10 +192,6 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 
 	if response == nil {
 		response, error = p.HandleUsers(argumentArray, user, moderatorList, args)
-	}
-
-	if response == nil {
-		response, error = p.HandleUtil(argumentArray, user, moderatorList, args)
 	}
 
 	if response != nil {
