@@ -173,7 +173,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 		response, error = p.HandleUtil(argumentArray, user, moderatorList, args)
 	}
 	
-	if len(argumentArray) > 2 {
+	if len(argumentArray) > 2 && response == nil {
 		if stringInSlice(argumentArray[2], moderatorList) {
 			return &model.CommandResponse{
 				ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
