@@ -2,6 +2,11 @@ GO ?= $(shell command -v go 2> /dev/null)
 NPM ?= $(shell command -v npm 2> /dev/null)
 CURL ?= $(shell command -v curl 2> /dev/null)
 MANIFEST_FILE ?= plugin.json
+GOPATH ?= $(shell go env GOPATH)
+GO_TEST_FLAGS ?= -race
+GO_BUILD_FLAGS ?=
+MM_UTILITIES_DIR ?= ../mattermost-utilities
+
 export GO111MODULE=on
 
 # You can include assets this directory into the bundle. This can be e.g. used to include profile pictures.
@@ -11,6 +16,11 @@ ASSETS_DIR ?= assets
 include build/setup.mk
 
 BUNDLE_NAME ?= $(PLUGIN_ID)-$(PLUGIN_VERSION).tar.gz
+
+# Include custom makefile, if pressent
+ifneq ($(wildcard build/custom.mk),)
+	include build/custom.mk
+endif
 
 ## Checks the code style, tests, builds and bundles the plugin.
 all: check-style test dist
@@ -22,7 +32,7 @@ apply:
 
 ## Runs govet and gofmt against all packages.
 .PHONY: check-style
-check-style: webapp/.npminstall gofmt govet
+check-style: webapp/.npminstall gofmt govet golint
 	@echo Checking for style guide compliance
 
 ifneq ($(HAS_WEBAPP),)
@@ -34,7 +44,7 @@ endif
 gofmt:
 ifneq ($(HAS_SERVER),)
 	@echo Running gofmt
-	@for package in $$(go list ./server/...); do \
+	@for package in $$(go list ./...); do \
 		echo "Checking "$$package; \
 		files=$$(go list -f '{{range .GoFiles}}{{$$.Dir}}/{{.}} {{end}}' $$package); \
 		if [ "$$files" ]; then \
@@ -54,21 +64,28 @@ endif
 govet:
 ifneq ($(HAS_SERVER),)
 	@echo Running govet
-	@# Workaroung because you can't install binaries without adding them to go.mod 
+	@# Workaround because you can't install binaries without adding them to go.mod
 	env GO111MODULE=off $(GO) get golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
-	$(GO) vet ./server/...
-	$(GO) vet -vettool=$(GOPATH)/bin/shadow ./server/...
+	$(GO) vet ./...
 	@echo Govet success
 endif
+
+## Runs golint against all packages.
+.PHONY: golint
+golint:
+	@echo Running lint
+	env GO111MODULE=off $(GO) get golang.org/x/lint/golint
+	$(GOPATH)/bin/golint -set_exit_status ./...
+	@echo lint success
 
 ## Builds the server, if it exists, including support for multiple architectures.
 .PHONY: server
 server:
 ifneq ($(HAS_SERVER),)
 	mkdir -p server/dist;
-	cd server && env GOOS=linux GOARCH=amd64 $(GO) build -o dist/plugin-linux-amd64;
-	cd server && env GOOS=darwin GOARCH=amd64 $(GO) build -o dist/plugin-darwin-amd64;
-	cd server && env GOOS=windows GOARCH=amd64 $(GO) build -o dist/plugin-windows-amd64.exe;
+	cd server && env GOOS=linux GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o dist/plugin-linux-amd64;
+	cd server && env GOOS=darwin GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o dist/plugin-darwin-amd64;
+	cd server && env GOOS=windows GOARCH=amd64 $(GO) build $(GO_BUILD_FLAGS) -o dist/plugin-windows-amd64.exe;
 endif
 
 ## Ensures NPM dependencies are installed without having to run this all the time.
@@ -136,18 +153,29 @@ endif
 .PHONY: test
 test: webapp/.npminstall
 ifneq ($(HAS_SERVER),)
-	$(GO) test -race -v ./server/...
+	$(GO) test -v $(GO_TEST_FLAGS) ./server/...
 endif
 ifneq ($(HAS_WEBAPP),)
-	cd webapp && $(NPM) run fix;
+	cd webapp && $(NPM) run fix && $(NPM) run test;
 endif
 
 ## Creates a coverage report for the server code.
 .PHONY: coverage
-coverage: server/.depensure webapp/.npminstall
+coverage: webapp/.npminstall
 ifneq ($(HAS_SERVER),)
-	$(GO) test -race -coverprofile=server/coverage.txt ./server/...
+	$(GO) test $(GO_TEST_FLAGS) -coverprofile=server/coverage.txt ./server/...
 	$(GO) tool cover -html=server/coverage.txt
+endif
+
+## Extract strings for translation from the source code.
+.PHONY: i18n-extract
+i18n-extract:
+ifneq ($(HAS_WEBAPP),)
+ifeq ($(HAS_MM_UTILITIES),)
+	@echo "You must clone github.com/mattermost/mattermost-utilities repo in .. to use this command"
+else
+	cd $(MM_UTILITIES_DIR) && npm install && npm run babel && node mmjstool/build/index.js i18n extract-webapp --webapp-dir $(PWD)/webapp
+endif
 endif
 
 ## Clean removes all build artifacts.
@@ -166,4 +194,4 @@ endif
 
 # Help documentatin à la https://marmelab.com/blog/2016/02/29/auto-documented-makefile.html
 help:
-	@cat Makefile | grep -v '\.PHONY' |  grep -v '\help:' | grep -B1 -E '^[a-zA-Z_.-]+:.*' | sed -e "s/:.*//" | sed -e "s/^## //" |  grep -v '\-\-' | sed '1!G;h;$$!d' | awk 'NR%2{printf "\033[36m%-30s\033[0m",$$0;next;}1' | sort
+	@cat Makefile | grep -v '\.PHONY' |  grep -v '\help:' | grep -B1 -E '^[a-zA-Z0-9_.-]+:.*' | sed -e "s/:.*//" | sed -e "s/^## //" |  grep -v '\-\-' | sed '1!G;h;$$!d' | awk 'NR%2{printf "\033[36m%-30s\033[0m",$$0;next;}1' | sort

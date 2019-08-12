@@ -8,6 +8,7 @@ import (
 	"github.com/mattermost/mattermost-server/plugin"
 )
 
+//Plugin The plugin itself
 type Plugin struct {
 	plugin.MattermostPlugin
 
@@ -30,6 +31,7 @@ const (
 	displayname   string = "System Admin"
 )
 
+//OnActivate Activates the plugin
 func (p *Plugin) OnActivate() error {
 	p.API.RegisterCommand(&model.Command{
 		Trigger:          trigger,
@@ -64,8 +66,8 @@ func remove(s []string, r string) []string {
 	return s
 }
 
+//ExecuteCommand Runs the commands
 func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
-
 	argumentArray := strings.Split(args.Command, " ")
 	moderatorList := strings.Split(strings.TrimSpace(p.getConfiguration().Moderators), ",")
 	var user *model.User
@@ -211,6 +213,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 
 }
 
+//MessageWillBePosted Handles mute and no-file settings
 func (p *Plugin) MessageWillBePosted(c *plugin.Context, post *model.Post) (*model.Post, string) {
 	moderatorList := strings.Split(strings.TrimSpace(p.getConfiguration().Moderators), ",")
 	var targetchannel *model.Channel

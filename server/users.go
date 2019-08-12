@@ -4,6 +4,7 @@ import (
 	"github.com/mattermost/mattermost-server/model"
 )
 
+//HandleUsers Handle user commands
 func (p *Plugin) HandleUsers(argumentArray []string, user *model.User, moderatorList []string, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	//globalban
 	if argumentArray[1] == "globalban" {

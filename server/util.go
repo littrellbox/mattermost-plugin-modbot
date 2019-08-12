@@ -4,6 +4,7 @@ import (
 	"github.com/mattermost/mattermost-server/model"
 )
 
+//HandleUtil Handles utility commands
 func (p *Plugin) HandleUtil(argumentArray []string, user *model.User, moderatorList []string, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	//channelid
 	if argumentArray[1] == "channelid" {

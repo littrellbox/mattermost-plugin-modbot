@@ -4,6 +4,7 @@ import (
 	"github.com/mattermost/mattermost-server/model"
 )
 
+//HandleMute Handle running mute command
 func (p *Plugin) HandleMute(argumentArray []string, user *model.User, moderatorList []string, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	//unmute
 	if argumentArray[1] == "unmute" {

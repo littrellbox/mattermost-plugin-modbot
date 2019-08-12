@@ -4,6 +4,7 @@ import (
 	"github.com/mattermost/mattermost-server/model"
 )
 
+//HandleFiles handle file management command
 func (p *Plugin) HandleFiles(argumentArray []string, user *model.User, moderatorList []string, args *model.CommandArgs) (*model.CommandResponse, *model.AppError) {
 	//userfiles
 	if argumentArray[1] == "userfiles" {
