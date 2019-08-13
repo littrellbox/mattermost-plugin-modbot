@@ -1,7 +1,9 @@
 package main
 
 import (
+	"time"
 	"github.com/mattermost/mattermost-server/model"
+	"strconv"
 )
 
 //HandleMute Handle running mute command
@@ -95,7 +97,61 @@ func (p *Plugin) HandleMute(argumentArray []string, user *model.User, moderatorL
 			}, nil
 		}
 	}
+	
+	//mutetime
+	if argumentArray[1] == "mutetime" {
+		if len(argumentArray) == 4 {
+			var targetuser *model.User
+			var err2 *model.AppError
+			targetuser, err2 = p.API.GetUserByUsername(argumentArray[2])
 
+			if err2 != nil {
+				return &model.CommandResponse{
+					ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+					Text:         "An error has occured. Please contact your adminstrator.",
+				}, nil
+			}
+
+			if targetuser.Id == args.UserId {
+				return &model.CommandResponse{
+					ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+					Text:         "You can't mute yourself.",
+				}, nil
+			}
+			
+			muteduserids = append(muteduserids, targetuser.Id)
+			
+			inttouse, err := strconv.Atoi(argumentArray[3])
+			
+			if err != nil {
+				return &model.CommandResponse{
+					ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+					Text:         "An error has occured. Please contact your adminstrator.",
+				}, nil
+			}
+			
+			timer2 := time.NewTimer(time.Duration(inttouse) * 60 * time.Second)
+    		go func() {
+        		<-timer2.C
+      			muteduserids = remove(muteduserids, targetuser.Id)
+				var reportPost *model.Post
+				reportPost = &model.Post {
+					UserId:    targetuser.Id,
+					ChannelId: args.ChannelId,
+					Message:   argumentArray[2] + " has been automatically unmuted.",
+				}
+
+				p.API.CreatePost(reportPost)
+    		}()
+			
+			return &model.CommandResponse{
+				ResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
+				Text:         "A moderator has muted user " + argumentArray[2] + " for " + argumentArray[3] + " minutes",
+				Username:     "System",
+			}, nil
+		}
+	}
+	
 	//mutechannel
 	if argumentArray[1] == "mutechannel" {
 		if len(argumentArray) == 2 {
