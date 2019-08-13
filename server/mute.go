@@ -130,6 +130,13 @@ func (p *Plugin) HandleMute(argumentArray []string, user *model.User, moderatorL
 				}, nil
 			}
 			
+			if inttouse > 1440 {
+				return &model.CommandResponse{
+					ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
+					Text:         "You cannot mute someone for more than 1440 minutes (1 day).",
+				}, nil
+			}
+			
 			timer2 := time.NewTimer(time.Duration(inttouse) * 60 * time.Second)
     		go func() {
         		<-timer2.C
