@@ -24,6 +24,7 @@ var mutedchannelids []string
 var muteduserids []string
 var fileblockedids []string
 var fileblockusers []string
+var restrictedmodeusers []string
 
 const (
 	trigger       string = "mod"
@@ -45,6 +46,15 @@ func (p *Plugin) OnActivate() error {
 		AutoCompleteDesc: "Report something.",
 		DisplayName:      displayname,
 	})
+	KVResModeUsers, err3 := p.API.KVGet("modbot_resmodeusers")
+
+	if err3 != nil {
+		return nil
+	}
+
+	if KVResModeUsers != nil {
+		restrictedmodeusers = strings.Split(strings.TrimSpace(string(KVResModeUsers)), ",")
+	}
 	return nil
 }
 
@@ -90,7 +100,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 					Text:         "The report channel id is not yet set",
 				}, nil
 			}
-			
+
 			var reportPost *model.Post
 			reportPost = &model.Post{
 				UserId:    user.Id,
@@ -99,7 +109,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 			}
 
 			p.API.CreatePost(reportPost)
-			
+
 			return &model.CommandResponse{
 				ResponseType: model.COMMAND_RESPONSE_TYPE_IN_CHANNEL,
 				Text:         "Your report has been received.",
@@ -112,16 +122,16 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 					Text:         "The report channel id is not yet set",
 				}, nil
 			}
-			
+
 			var reportPost *model.Post
-			reportPost = &model.Post {
+			reportPost = &model.Post{
 				UserId:    user.Id,
 				ChannelId: reportChannel,
-				Message:   ":warning: @all " + argumentArray[1] + ": " + strings.Replace(args.Command, "/report "+argumentArray[1]+ " ", "", 1),
+				Message:   ":warning: @all " + argumentArray[1] + ": " + strings.Replace(args.Command, "/report "+argumentArray[1]+" ", "", 1),
 			}
 
 			p.API.CreatePost(reportPost)
-			
+
 			return &model.CommandResponse{
 				ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
 				Text:         "Your report has been received.",
@@ -145,7 +155,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	}
 
 	p.API.CreatePost(auditPost)
-	
+
 	if err != nil {
 		return &model.CommandResponse{
 			ResponseType: model.COMMAND_RESPONSE_TYPE_EPHEMERAL,
@@ -174,7 +184,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	if response == nil {
 		response, error = p.HandleUtil(argumentArray, user, moderatorList, args)
 	}
-	
+
 	if len(argumentArray) > 2 && response == nil {
 		if stringInSlice(argumentArray[2], moderatorList) {
 			return &model.CommandResponse{
@@ -183,7 +193,7 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 			}, nil
 		}
 	}
-	
+
 	if response == nil {
 		response, error = p.HandleFiles(argumentArray, user, moderatorList, args)
 	}
