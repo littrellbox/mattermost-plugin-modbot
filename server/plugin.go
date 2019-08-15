@@ -205,6 +205,10 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 	if response == nil {
 		response, error = p.HandleUsers(argumentArray, user, moderatorList, args)
 	}
+	
+	if response == nil {
+		response, error = p.HandleRestrictedMode(argumentArray, user, moderatorList, args)
+	}
 
 	if response != nil {
 		return response, error
@@ -230,26 +234,56 @@ func (p *Plugin) MessageWillBePosted(c *plugin.Context, post *model.Post) (*mode
 	var err2 *model.AppError
 	targetchannel, err2 = p.API.GetChannel(post.ChannelId)
 	if err2 != nil {
-		return nil, "An error has occured determining if the file could be uploaded or not. (2)"
+		p.API.SendEphemeralPost(post.UserId, &model.Post{
+			ChannelId: post.ChannelId,
+			Message:   "An error has occured determining if the file could be uploaded or not. (2):GetChannel",
+		})
+		return nil, ""
 	}
 	var targetuser *model.User
 	targetuser, err2 = p.API.GetUser(post.UserId)
 	if err2 != nil {
-		return nil, "An error has occured determining if the file could be uploaded or not. (2)"
+		p.API.SendEphemeralPost(post.UserId, &model.Post{
+			ChannelId: post.ChannelId,
+			Message:   "An error has occured determining if the file could be uploaded or not. (2):GetUser",
+		})
+		return nil, ""
 	}
+	
+	if stringInSlice(targetuser.Id, restrictedmodeusers) {
+        if len(post.FileIds) != 0 && stringInSlice(targetuser.Username, moderatorList) == false {
+			p.API.SendEphemeralPost(post.UserId, &model.Post{
+				ChannelId: post.ChannelId,
+				Message:   "You are currently in restricted mode. Users in restricted mode can't send files.",
+			})
+			return nil, "plugin.message_will_be_posted.dismiss_post"
+		}
+    }
 
 	if stringInSlice(targetchannel.TeamId, fileblockedids) || stringInSlice(targetuser.Id, fileblockusers) {
 		if len(post.FileIds) != 0 && stringInSlice(targetuser.Username, moderatorList) == false {
-			return nil, "File uploading is disabled."
+			p.API.SendEphemeralPost(post.UserId, &model.Post{
+				ChannelId: post.ChannelId,
+				Message:   "File uploading is currently disabled.",
+			})
+			return nil, "plugin.message_will_be_posted.dismiss_post"
 		}
 	}
 	if stringInSlice(post.ChannelId, mutedchannelids) == true {
 		if stringInSlice(targetuser.Username, moderatorList) == false {
-			return nil, "You are not permitted to talk in this channel at this time."
+			p.API.SendEphemeralPost(post.UserId, &model.Post{
+				ChannelId: post.ChannelId,
+				Message:   "Only moderators can send messages in this channel.",
+			})
+			return nil, "plugin.message_will_be_posted.dismiss_post"
 		}
 	}
 	if stringInSlice(post.UserId, muteduserids) == true {
-		return nil, "You are muted!"
+		p.API.SendEphemeralPost(post.UserId, &model.Post{
+			ChannelId: post.ChannelId,
+			Message:   "You are muted!",
+		})
+		return nil, "plugin.message_will_be_posted.dismiss_post"
 	}
 	return post, ""
 }

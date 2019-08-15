@@ -5,5 +5,5 @@ var manifest = struct {
 	Version string
 }{
 	Id:      "me.william341.mattermost-modbot",
-	Version: "0.6.1",
+	Version: "0.7.1",
 }
