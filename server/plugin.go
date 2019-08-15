@@ -227,6 +227,59 @@ func (p *Plugin) ExecuteCommand(c *plugin.Context, args *model.CommandArgs) (*mo
 
 }
 
+func (p *Plugin) MessageHasBeenUpdated(c *plugin.Context, newPost, oldPost *model.Post) {
+
+	//use plugin.getSession to get Session object then use the Session object to retrive User object
+	moderatorList := strings.Split(strings.TrimSpace(p.getConfiguration().Moderators), ",")
+	auditChannel := strings.TrimSpace(p.getConfiguration().AuditChannel)
+	
+	var targetsession *model.Session
+	var err *model.AppError
+	
+	targetsession, err = p.API.GetSession(c.SessionId)
+	if err != nil {
+		p.API.SendEphemeralPost(newPost.UserId, &model.Post{
+			ChannelId: newPost.ChannelId,
+			Message:   "An error has occured determining if you are a moderator or not. (3):GetSession",
+		})
+		return
+	}
+	
+	var targetuser *model.User
+	var err2 *model.AppError
+	
+	targetuser, err2 = p.API.GetUser(targetsession.UserId)
+	if err2 != nil {
+		p.API.SendEphemeralPost(newPost.UserId, &model.Post{
+			ChannelId: newPost.ChannelId,
+			Message:   "An error has occured determining if you are a moderator or not. (3):GetUser",
+		})
+		return
+	}
+	
+	var originaluser *model.User
+	var err3 *model.AppError
+	
+	originaluser, err3 = p.API.GetUser(oldPost.UserId)
+	if err3 != nil {
+		p.API.SendEphemeralPost(newPost.UserId, &model.Post{
+			ChannelId: newPost.ChannelId,
+			Message:   "An error has occured determining the username of the original poster. (4):GetUser",
+		})
+		return
+	}
+	
+	if stringInSlice(targetuser.Username, moderatorList) {
+		var auditPost *model.Post
+		auditPost = &model.Post{
+			UserId:    newPost.UserId,
+			ChannelId: auditChannel,
+			Message:   targetuser.Username + " edited " + originaluser.Username + "'s post.",
+		}
+		p.API.CreatePost(auditPost)
+	}
+}
+
 //MessageWillBePosted Handles mute and no-file settings
 func (p *Plugin) MessageWillBePosted(c *plugin.Context, post *model.Post) (*model.Post, string) {
 	moderatorList := strings.Split(strings.TrimSpace(p.getConfiguration().Moderators), ",")
