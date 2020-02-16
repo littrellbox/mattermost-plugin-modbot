@@ -14,7 +14,8 @@ make dist
 # Usage:
 Make sure the moderator list and report channel are set in the settings. You can get your channel ID using /mod channelid.
 
-``/mod:
+```
+/mod:
 /mod teamkick \<user\> \[silent\] - Kicks a user from the channel you are currently in.
 /mod globalban \<user\> \[silent\] - Deactivates a user's account.
 /mod mute <user> \[silent\] - Mutes a user.
@@ -27,4 +28,5 @@ Make sure the moderator list and report channel are set in the settings. You can
 
 /report:
 /report \<user\> \<report\> - Reports a user
-/report bug \<report\> - Reports a bug``
+/report bug \<report\> - Reports a bug
+```
